@@ -42,9 +42,7 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 #include <Shlwapi.h>
 
 
-#include "boost/thread/thread.hpp"
-#include "boost/asio/io_service.hpp"
-#include "boost/asio.hpp"
+
 
 std::locale loc; //locale
 
@@ -58,7 +56,7 @@ extern long g_cDllRef;
 
 #define IDM_DISPLAY             0  // The command's identifier offset
 #define MAX32BIT 4294967295
-#define buffSize 8192
+#define buffSize 1024*4
 
 FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1), 
     m_pszMenuText(L"&Load list to log.txt"),
@@ -72,7 +70,7 @@ FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1),
 	proceededNumber(0)
 {
 	std::locale::global(std::locale(""));		
-
+	checkSumIsReady = CreateEvent(NULL, true, false, NULL);
     InterlockedIncrement(&g_cDllRef);
 
     // Load the bitmap for the menu item. 
@@ -85,19 +83,30 @@ FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1),
 
 FileContextMenuExt::~FileContextMenuExt(void)
 {	
+	std::wofstream debug;
+	debug.open(L"F:\\debug_Destructor.txt", std::ios_base::out | std::ios_base::app);
+	debug << L"Started" << endl;
     if (m_hMenuBmp)
-    {
+    {		
         DeleteObject(m_hMenuBmp);
         m_hMenuBmp = NULL;
     }
 
 	for (auto i=m_szSelectedFilesList.begin(); i!=m_szSelectedFilesList.end(); i++)
 	{
+		debug << L"Deleting path" << endl;
 		delete [] i->path;
-		delete i->checkSumEvent;
-	}
+		debug << L"Closing event" << endl;
+		CloseHandle(i->checkSumEvent);
+		debug << L"Event is closed" << endl;
+		debug << L"Event address is " << i->checkSum << endl;
+	}	
+
+	CloseHandle(checkSumIsReady);
 
     InterlockedDecrement(&g_cDllRef);
+	debug << L"Finished" << endl;
+	debug.close();
 }
 
 bool compareStrings(const fileInfo& s1, const fileInfo& s2)
@@ -151,19 +160,28 @@ void findCheckSum(fileInfo* data)
 	std::fstream file;
 
 	DWORD sum = 0;
-	DWORD buff[buffSize];
+	char buff[buffSize];
+	DWORD temp[4], T;
 	
 	file.open(data->path, std::ios_base::binary | std::ios_base::in);
 
-	while (file.read((char*)buff, sizeof(buff)))
+	while (!file.eof())
 	{
-		for (DWORD i=0; i < buffSize; i++)
-			sum = sum ^ buff[i];
+		int i=0;
+		file.read(buff, sizeof(buff));
+		std::streamsize wasRead = file.gcount();
+		while (wasRead > i)
+		{
+			T = 0;
+			for (int j = 0; j < 4; j++, i++)
+			{
+				temp[j] = (i<wasRead) ? buff[i] : 0;
+				T += temp[j] << (4-j);
+			}
+			sum = sum ^ T;
+		}
 	}		
-	std::streamsize wasRead = file.gcount();
-	for (std::streamsize i=0; i < wasRead; i++)
-			sum = sum ^ buff[i];
-
+	
 	file.clear();
 	file.close();	
 
@@ -179,9 +197,13 @@ void FileContextMenuExt::threadFunc()
 {
 	std::list<fileInfo>::iterator it;
 	
-	while (this->proceededNumber++ < this->m_szSelectedFilesList.size())
+	while (this->proceededNumber < this->m_szSelectedFilesList.size())
 		{
-			it = (this->currentCheckSum)++;
+			{
+				boost::lock_guard<boost::recursive_mutex> lock(this->m_guard);
+				this->proceededNumber++;
+				it = (this->currentCheckSum)++;
+			}			
 			findCheckSum(&*it);		
 		}
 }
@@ -189,8 +211,7 @@ void FileContextMenuExt::threadFunc()
 void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 {		
 	std::wofstream debug;
-	debug.open(L"F:\\debug_OnVerbDisplayFileName", std::ios_base::app | std::ios_base::out);
-	debug << "Верб" << endl;
+	debug.open(L"F:\\debug_OnVerbDisplayFileName.txt", std::ios_base::app | std::ios_base::out);	
 
 	if (!this->m_szSelectedFilesList.empty())
 	{
@@ -220,7 +241,7 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 		DWORDLONG highSize, lowSize, fileSize;
 		std::wstring creationTimeSt;										
 
-		int threadNumber = 1; //boost::thread::hardware_concurrency() - 1;
+		int threadNumber = boost::thread::hardware_concurrency() - 1;
 		if (threadNumber == 0)
 			threadNumber++;
 		this->currentCheckSum = this->m_szSelectedFilesList.begin();
@@ -233,6 +254,7 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 			trGroup.add_thread(threads[i]);
 		}
 		
+		//trGroup.join_all();
 
 		for (auto j = this->m_szSelectedFilesList.begin(); 
 			logFile.good() 
@@ -245,20 +267,21 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 
 			highSize = fileInfo.nFileSizeHigh;
 			lowSize = fileInfo.nFileSizeLow;
-			fileSize = lowSize + highSize*MAX32BIT + highSize;
-			debug << L"Кирилица" << endl;			
+			fileSize = lowSize + highSize*MAX32BIT + highSize;					
 			debug << "Waiting for " << j->path << " event" << endl;
-			if(WAIT_OBJECT_0 == WaitForSingleObject(j->checkSumEvent, 100))
+			if(WAIT_OBJECT_0 == WaitForSingleObject(j->checkSumEvent, INFINITE))
 
 			logFile << j->path					
-					<< L" CheckSum: " << j->checkSum
+					<< L" CheckSum: " << std::hex << j->checkSum << std::dec
 					<< L" Size: " << fileSize << L" bytes"					
 					<< L" Creating time: " << TimeToString(&creationTime)
 					<< endl;
 			else debug << "Event waiting error" << endl;
 		}		
 
+		debug << "join_all()" << endl;
 		trGroup.join_all();
+		debug << "delete threads" << endl;
 		delete []threads;
 
 		logFile.close();
@@ -379,7 +402,7 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(
 						t.path = fileName;												
 						
 						debug << "Creating event" << endl;
-						t.checkSumEvent = CreateEvent(NULL, true, false, NULL);												
+						t.checkSumEvent = CreateEvent(NULL, true, false, NULL);
 						debug << "Created. Address=" << t.checkSumEvent << endl;						
 						debug << "Pushing to the list" << endl;
 						this->m_szSelectedFilesList.push_back(t);
@@ -474,7 +497,7 @@ IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(
 IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
 {
 	std::wofstream debug;
-	debug.open(L"F:\\debug_IncokeCommand.txt", std::ios_base::out | std::ios_base::app);
+	debug.open(L"F:\\debug_InvokeCommand.txt", std::ios_base::out | std::ios_base::app);
 	debug << L"Started" << endl;	
     BOOL fUnicode = FALSE;
 
@@ -551,9 +574,10 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
         // extension?
         if (LOWORD(pici->lpVerb) == IDM_DISPLAY)
         {
-			debug << L"offset" << endl;
-			debug.close();
+			debug << L"offset" << endl;			
             OnVerbDisplayFileName(pici->hwnd);
+			debug << L"Verb is done" << endl;
+			debug.close();
         }
         else
         {

@@ -32,6 +32,8 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 #include <windows.h>
 #include <shlobj.h>     // For IShellExtInit and IContextMenu
 #include <list>
+#include "boost/thread.hpp"
+#include "boost/thread/thread.hpp"
 
 
 struct fileInfo
@@ -76,6 +78,8 @@ private:
 
 	int proceededNumber;
 	std::list<fileInfo>::iterator currentCheckSum;
+	HANDLE checkSumIsReady;
+	boost::recursive_mutex m_guard;
 
 	LPDATAOBJECT pDataObjtemp;
 
