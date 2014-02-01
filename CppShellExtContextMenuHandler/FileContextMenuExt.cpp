@@ -40,6 +40,7 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 #include "resource.h"
 #include <strsafe.h>
 #include <Shlwapi.h>
+#include "boost/filesystem.hpp"
 
 
 
@@ -83,9 +84,9 @@ FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1),
 
 FileContextMenuExt::~FileContextMenuExt(void)
 {	
-	std::wofstream debug;
-	debug.open(L"F:\\debug_Destructor.txt", std::ios_base::out | std::ios_base::app);
-	debug << L"Started" << endl;
+	//std::wofstream debug;
+	//debug.open(L"F:\\//debug_Destructor.txt", std::ios_base::out | std::ios_base::app);
+	//debug << L"Started" << endl;
     if (m_hMenuBmp)
     {		
         DeleteObject(m_hMenuBmp);
@@ -94,19 +95,19 @@ FileContextMenuExt::~FileContextMenuExt(void)
 
 	for (auto i=m_szSelectedFilesList.begin(); i!=m_szSelectedFilesList.end(); i++)
 	{
-		debug << L"Deleting path" << endl;
+		//debug << L"Deleting path" << endl;
 		delete [] i->path;
-		debug << L"Closing event" << endl;
+		//debug << L"Closing event" << endl;
 		CloseHandle(i->checkSumEvent);
-		debug << L"Event is closed" << endl;
-		debug << L"Event address is " << i->checkSum << endl;
+		//debug << L"Event is closed" << endl;
+		//debug << L"Event address is " << i->checkSum << endl;
 	}	
 
 	CloseHandle(checkSumIsReady);
 
     InterlockedDecrement(&g_cDllRef);
-	debug << L"Finished" << endl;
-	debug.close();
+	//debug << L"Finished" << endl;
+	//debug.close();
 }
 
 bool compareStrings(const fileInfo& s1, const fileInfo& s2)
@@ -153,10 +154,10 @@ std::wstring TimeToString(const LPSYSTEMTIME creationTime)
 
 void findCheckSum(fileInfo* data)
 {		
-	std::wofstream debug;
-	debug.open(L"F:\\debug_findCheckSum.txt",std::ios_base::out | std::ios_base::app);
+	//std::wofstream debug;
+	//debug.open(L"F:\\//debug_findCheckSum.txt",std::ios_base::out | std::ios_base::app);
 
-	debug << "Calculating checksum for " << data->path << endl;
+	//debug << "Calculating checksum for " << data->path << endl;
 	std::fstream file;
 
 	DWORD sum = 0;
@@ -165,7 +166,7 @@ void findCheckSum(fileInfo* data)
 	
 	file.open(data->path, std::ios_base::binary | std::ios_base::in);
 
-	while (!file.eof())
+	while (file.good())
 	{
 		int i=0;
 		file.read(buff, sizeof(buff));
@@ -186,11 +187,12 @@ void findCheckSum(fileInfo* data)
 	file.close();	
 
 	data->checkSum = sum;
-	if (!SetEvent(data->checkSumEvent))
-		debug << "Set Ivent error. ErrorNumber=" << GetLastError() << endl;
+	SetEvent(data->checkSumEvent);
+	//if (!SetEvent(data->checkSumEvent))
+		//debug << "Set Ivent error. ErrorNumber=" << GetLastError() << endl;
 
-	debug << "Checksum = " << sum << endl;	
-	debug.close();
+	//debug << "Checksum = " << sum << endl;	
+	//debug.close();
 }
 
 void FileContextMenuExt::threadFunc()
@@ -210,8 +212,8 @@ void FileContextMenuExt::threadFunc()
 
 void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 {		
-	std::wofstream debug;
-	debug.open(L"F:\\debug_OnVerbDisplayFileName.txt", std::ios_base::app | std::ios_base::out);	
+	//std::wofstream debug;
+	//debug.open(L"F:\\//debug_OnVerbDisplayFileName.txt", std::ios_base::app | std::ios_base::out);	
 
 	if (!this->m_szSelectedFilesList.empty())
 	{
@@ -248,9 +250,9 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 
 		boost::thread_group trGroup;
 		boost::thread **threads = new boost::thread*[threadNumber];
-		for (int i=0; i<threadNumber; i++)
+		for (int i = 0; i < threadNumber; i++)
 		{
-			threads[i]=new boost::thread(&FileContextMenuExt::threadFunc, this);
+			threads[i] = new boost::thread(&FileContextMenuExt::threadFunc, this);
 			trGroup.add_thread(threads[i]);
 		}
 		
@@ -268,25 +270,26 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 			highSize = fileInfo.nFileSizeHigh;
 			lowSize = fileInfo.nFileSizeLow;
 			fileSize = lowSize + highSize*MAX32BIT + highSize;					
-			debug << "Waiting for " << j->path << " event" << endl;
-			if(WAIT_OBJECT_0 == WaitForSingleObject(j->checkSumEvent, INFINITE))
-
+			//debug << "Waiting for " << j->path << " event" << endl;
+			//if(WAIT_OBJECT_0 == WaitForSingleObject(j->checkSumEvent, INFINITE))
+			WaitForSingleObject(j->checkSumEvent, INFINITE);
 			logFile << j->path					
 					<< L" CheckSum: " << std::hex << j->checkSum << std::dec
-					<< L" Size: " << fileSize << L" bytes"					
+					<< L" Size: " << boost::filesystem::file_size(j->path) << L" bytes"					
 					<< L" Creating time: " << TimeToString(&creationTime)
 					<< endl;
-			else debug << "Event waiting error" << endl;
+			//else debug << "Event waiting error" << endl;
 		}		
 
-		debug << "join_all()" << endl;
+		//debug << "join_all()" << endl;
 		trGroup.join_all();
-		debug << "delete threads" << endl;
-		delete []threads;
+		//debug << "delete threads" << endl;
+		if (threads)
+			delete []threads;
 
 		logFile.close();
 	}
-	debug.close();
+	//debug.close();
 }
 
 
@@ -331,17 +334,18 @@ IFACEMETHODIMP_(ULONG) FileContextMenuExt::Release()
 IFACEMETHODIMP FileContextMenuExt::Initialize(
     LPCITEMIDLIST pidlFolder, LPDATAOBJECT pDataObj, HKEY hKeyProgID)
 {			    		
-	std::wofstream debug;
-	debug.open(L"F:\\debug_Initialize.txt", std::ios_base::out | std::ios_base::app);
-	debug << "Инициализация" << endl;
+	//std::wofstream debug;
+	//debug.open(L"F:\\//debug_Initialize.txt", std::ios_base::out | std::ios_base::app);
+	//debug << "Инициализация" << endl;
 	
 	if (!this->m_szSelectedFilesList.empty())
 	{
-		debug << "Not empty list" << endl;
+		//debug << "Not empty list" << endl;
 		for (auto i = this->m_szSelectedFilesList.begin(); i != this->m_szSelectedFilesList.end(); i++)
 		{
-			delete i->checkSumEvent;
-			delete i->path;
+			if (i->checkSumEvent) 
+				delete i->checkSumEvent;
+			CloseHandle(i->checkSumEvent);
 		}
 	}
 	this->m_szSelectedFilesList.clear();
@@ -377,22 +381,22 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(
 				wchar_t temp[MAX_PATH];				
 				wchar_t* fileName;
 
-				debug << nFiles << " elements where received" << endl;
+				//debug << nFiles << " elements where received" << endl;
 
 				for (UINT i = 0; i < nFiles; i++)
 				{
 					
 					if (0 == DragQueryFile(hDrop, i, temp, ARRAYSIZE(temp)))
 					{
-						debug << "DragQueryError" << endl;
+						//debug << "DragQueryError" << endl;
 						return E_FAIL;								
 					}
 
 					StringCchLength(temp,MAX_PATH,&nameSize);		
 
-					debug << "Working on " << temp << endl;						
+					//debug << "Working on " << temp << endl;						
 
-					if (!PathIsDirectoryW(temp))
+					if (boost::filesystem::exists(temp) && boost::filesystem::is_regular_file(temp))
 					{						
 						fileName = new wchar_t[nameSize+1];
 						StringCchCopy(fileName,nameSize+1,temp);
@@ -401,12 +405,12 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(
 						t.checkSum = 0;
 						t.path = fileName;												
 						
-						debug << "Creating event" << endl;
+						//debug << "Creating event" << endl;
 						t.checkSumEvent = CreateEvent(NULL, true, false, NULL);
-						debug << "Created. Address=" << t.checkSumEvent << endl;						
-						debug << "Pushing to the list" << endl;
+						//debug << "Created. Address=" << t.checkSumEvent << endl;						
+						//debug << "Pushing to the list" << endl;
 						this->m_szSelectedFilesList.push_back(t);
-						debug << "Pushing finished" << endl;
+						//debug << "Pushing finished" << endl;
 					}				
 				}							               
             }
@@ -420,8 +424,8 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(
 
 	// If any value other than S_OK is returned from the method, the context 
     // menu item is not displayed.	
-	debug << "Initialization finished " << hr << endl;
-	debug.close();
+	//debug << "Initialization finished " << hr << endl;
+	//debug.close();
 
 	return hr;		    
 }
@@ -443,9 +447,9 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(
 IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(
     HMENU hMenu, UINT indexMenu, UINT idCmdFirst, UINT idCmdLast, UINT uFlags)
 {
-	std::wofstream debug;
-	debug.open(L"F:\\debug_QueryContextMenu.txt", std::ios_base::out | std::ios_base::app);
-	debug << L"Started" << endl;
+	//std::wofstream debug;
+	//debug.open(L"F:\\//debug_QueryContextMenu.txt", std::ios_base::out | std::ios_base::app);
+	//debug << L"Started" << endl;
 	
     // If uFlags include CMF_DEFAULTONLY then we should not do anything.
     if (CMF_DEFAULTONLY & uFlags)
@@ -481,8 +485,8 @@ IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(
     // Return an HRESULT value with the severity set to SEVERITY_SUCCESS. 
     // Set the code value to the offset of the largest command identifier 
     // that was assigned, plus one (1).
-	debug << L"Success" << endl;
-	debug.close();
+	//debug << L"Success" << endl;
+	//debug.close();
     return MAKE_HRESULT(SEVERITY_SUCCESS, 0, USHORT(IDM_DISPLAY + 1));
 }
 
@@ -496,9 +500,9 @@ IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(
 //
 IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
 {
-	std::wofstream debug;
-	debug.open(L"F:\\debug_InvokeCommand.txt", std::ios_base::out | std::ios_base::app);
-	debug << L"Started" << endl;	
+	//std::wofstream debug;
+	//debug.open(L"F:\\//debug_InvokeCommand.txt", std::ios_base::out | std::ios_base::app);
+	//debug << L"Started" << endl;	
     BOOL fUnicode = FALSE;
 
     // Determine which structure is being passed in, CMINVOKECOMMANDINFO or 
@@ -533,8 +537,8 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
         // Is the verb supported by this context menu extension?
         if (StrCmpIA(pici->lpVerb, m_pszVerb) == 0)
         {
-			debug << L"ANSI verb-string" << endl;
-			debug.close();
+			//debug << L"ANSI verb-string" << endl;
+			//debug.close();
             OnVerbDisplayFileName(pici->hwnd);
         }
         else
@@ -553,8 +557,8 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
         // Is the verb supported by this context menu extension?
         if (StrCmpIW(((CMINVOKECOMMANDINFOEX*)pici)->lpVerbW, m_pwszVerb) == 0)
         {
-			debug << L"UNICODE verb-string" << endl;
-			debug.close();
+			//debug << L"UNICODE verb-string" << endl;
+			//debug.close();
             OnVerbDisplayFileName(pici->hwnd);
         }
         else
@@ -574,10 +578,10 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
         // extension?
         if (LOWORD(pici->lpVerb) == IDM_DISPLAY)
         {
-			debug << L"offset" << endl;			
+			//debug << L"offset" << endl;			
             OnVerbDisplayFileName(pici->hwnd);
-			debug << L"Verb is done" << endl;
-			debug.close();
+			//debug << L"Verb is done" << endl;
+			//debug.close();
         }
         else
         {
@@ -607,9 +611,9 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
 IFACEMETHODIMP FileContextMenuExt::GetCommandString(UINT_PTR idCommand, 
     UINT uFlags, UINT *pwReserved, LPSTR pszName, UINT cchMax)
 {
-	std::wofstream debug;
-	debug.open(L"F:\\debug_GetCommandString.txt", std::ios_base::out | std::ios_base::app);
-	debug << L"Started" << endl;
+	//std::wofstream debug;
+	//debug.open(L"F:\\//debug_GetCommandString.txt", std::ios_base::out | std::ios_base::app);
+	//debug << L"Started" << endl;
 	
     HRESULT hr = E_INVALIDARG;
 
@@ -639,8 +643,8 @@ IFACEMETHODIMP FileContextMenuExt::GetCommandString(UINT_PTR idCommand,
 
     // If the command (idCommand) is not supported by this context menu 
     // extension handler, return E_INVALIDARG.
-	debug << L"Finished " << hr << endl;
-	debug.close();
+	//debug << L"Finished " << hr << endl;
+	//debug.close();
     return hr;
 }
 
