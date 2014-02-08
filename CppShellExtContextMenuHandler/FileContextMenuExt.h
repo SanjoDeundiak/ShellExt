@@ -32,16 +32,9 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 #include <windows.h>
 #include <shlobj.h>     // For IShellExtInit and IContextMenu
 #include <list>
-#include "boost/thread.hpp"
-#include "boost/thread/thread.hpp"
 
-
-struct fileInfo
-{
-	wchar_t* path;
-	DWORD checkSum;
-	HANDLE checkSumEvent;
-};
+#include "CheckSumMultiThread.h"
+#include "FileInfo.h"
 
 class FileContextMenuExt : public IShellExtInit, public IContextMenu
 {
@@ -68,18 +61,13 @@ private:
     // Reference count of component.
     long m_cRef;
 
-    // The name of the selected file.
-    //wchar_t m_szSelectedFile[MAX_PATH];
-	std::list<fileInfo> m_szSelectedFilesList;	
+    // List with selected files info.
+	std::list<FileInfo> m_szSelectedFilesList;	
+
+	boost::mutex mut; // For checksum sleep
 
     // The method that handles the "display" verb.
-    void OnVerbDisplayFileName(HWND hWnd);	
-	void threadFunc();
-
-	int proceededNumber;
-	std::list<fileInfo>::iterator currentCheckSum;
-	HANDLE checkSumIsReady;
-	boost::recursive_mutex m_guard;
+    void OnVerbDisplayFileName(HWND hWnd);					
 
 	LPDATAOBJECT pDataObjtemp;
 

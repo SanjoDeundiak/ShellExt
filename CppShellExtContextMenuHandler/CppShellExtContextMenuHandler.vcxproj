@@ -156,12 +156,15 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CheckSumMultiThread.h" />
     <ClInclude Include="ClassFactory.h" />
     <ClInclude Include="FileContextMenuExt.h" />
+    <ClInclude Include="FileInfo.h" />
     <ClInclude Include="Reg.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CheckSumMultiThread.cpp" />
     <ClCompile Include="ClassFactory.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
@@ -178,6 +181,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="FileContextMenuExt.cpp" />
+    <ClCompile Include="FileInfo.cpp" />
     <ClCompile Include="Reg.cpp" />
   </ItemGroup>
   <ItemGroup>

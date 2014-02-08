@@ -36,6 +36,12 @@
     <ClCompile Include="Reg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CheckSumMultiThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FileInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClassFactory.h">
@@ -48,6 +54,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckSumMultiThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FileInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
