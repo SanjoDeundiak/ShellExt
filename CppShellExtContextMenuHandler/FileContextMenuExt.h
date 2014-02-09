@@ -31,10 +31,9 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 
 #include <windows.h>
 #include <shlobj.h>     // For IShellExtInit and IContextMenu
-#include <list>
+#include <list> // For FileInfo list
 
-#include "CheckSumMultiThread.h"
-#include "FileInfo.h"
+#include "FileInfo.h" // For FileInfo list
 
 class FileContextMenuExt : public IShellExtInit, public IContextMenu
 {
@@ -64,10 +63,8 @@ private:
     // List with selected files info.
 	std::list<FileInfo> m_szSelectedFilesList;	
 
-	boost::mutex mut; // For checksum sleep
-
     // The method that handles the "display" verb.
-    void OnVerbDisplayFileName(HWND hWnd);					
+    void OnVerbDisplayFileName(HWND hWnd);
 
 	LPDATAOBJECT pDataObjtemp;
 

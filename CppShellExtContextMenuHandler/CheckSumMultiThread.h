@@ -10,17 +10,17 @@
 class CheckSumMultiThread
 {
 	public:		
-		CheckSumMultiThread(std::list<FileInfo> *pfileList);
+		CheckSumMultiThread(std::list<FileInfo> &pfileList);
 		~CheckSumMultiThread();
-		int start();
 
-	private:				
+	private:
+		void start();
 		void threadFunc();
 		int32_t findCheckSum(const wchar_t* path);		
 
 		boost::thread_group trGroup;
 		boost::mutex mtx;
 
-		std::list<FileInfo> *pfileList;
+		std::list<FileInfo> &fileList;
 		std::list<FileInfo>::iterator currentCheckSum;		
 };

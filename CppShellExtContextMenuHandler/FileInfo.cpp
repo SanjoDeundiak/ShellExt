@@ -1,9 +1,11 @@
 #include "FileInfo.h"
+#include <locale> //for char_type toupper(char_type)
 
 FileInfo::FileInfo(const FileInfo& other) :
 	m_checkSum(other.m_checkSum),
 	m_creationTime(other.m_creationTime),
-	m_ready(other.m_ready)
+	m_ready(other.m_ready),
+	loc(other.loc)
 {
 	cond = new boost::condition_variable;
 	size_t length;
@@ -14,7 +16,8 @@ FileInfo::FileInfo(const FileInfo& other) :
 
 FileInfo::FileInfo(const wchar_t *path) : m_checkSum(0),
 	m_path(NULL),
-	m_ready(false)
+	m_ready(false),
+	loc("")
 {
 	cond = new boost::condition_variable;
 	size_t length;
@@ -26,8 +29,23 @@ FileInfo::FileInfo(const wchar_t *path) : m_checkSum(0),
 	m_creationTime = CreationTime(m_path);	
 }
 
+bool FileInfo::operator<(const FileInfo &other) const
+{
+	const wchar_t *st1=this->path(), *st2=other.path();
+	int i=0;
+	size_t n1 = 0, n2 = 0;
+
+	StringCchLengthW(st1, MAX_PATH, &n1);
+	StringCchLengthW(st1, MAX_PATH, &n2);	
+	
+	while (i<n1 && i<n2 && std::toupper(st1[i], loc) == std::toupper(st2[i], loc))
+		i++;
+	return (std::toupper(st1[i], loc) < std::toupper(st2[i], loc));
+}
+
 FileInfo &FileInfo::operator=(FileInfo &other)	
 {
+	loc = other.loc;
 	m_ready = other.m_ready;
 	m_checkSum = other.m_checkSum;
 	m_creationTime = other.m_creationTime;	
@@ -43,10 +61,11 @@ FileInfo &FileInfo::operator=(FileInfo &other)
 
 FileInfo::~FileInfo()
 {
-	if (m_path)
-		delete m_path;
-	if (cond)
-		delete cond;
+	delete m_path;
+	m_path = nullptr;
+
+	delete cond;
+	cond = nullptr;
 }
 
 bool FileInfo::ready() const

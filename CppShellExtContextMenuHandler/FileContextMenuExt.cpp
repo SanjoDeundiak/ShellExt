@@ -27,32 +27,15 @@ EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 \***************************************************************************/
 
-#pragma warning(push)
-#pragma warning(disable: 4995)
-#include <fstream> //for file output
-#include <iomanip> //setw, setfill
-
-#include <locale> //for char_type toupper(char_type)
-#pragma warning(pop)
-
-#include <WinSock2.h>
-
-#include "boost/thread.hpp"
-#include "boost/thread/thread.hpp"
-#include "boost/cstdint.hpp"
+//#include <WinSock2.h>
 
 #include "FileContextMenuExt.h"
+#include "FileLogger.h"
 #include "resource.h"
 #include <strsafe.h>
 #include <Shlwapi.h>
-#include "boost/filesystem.hpp"
-
-std::locale loc; //locale
-
-using std::endl;
 
 #pragma comment(lib, "shlwapi.lib")
-
 
 extern HINSTANCE g_hInst;
 extern long g_cDllRef;
@@ -69,7 +52,6 @@ FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1),
     m_pwszVerbHelpText(L"Display File Name (C++)"),
 	m_hMenuBmp(NULL)
 {
-	std::locale::global(std::locale(""));			
     InterlockedIncrement(&g_cDllRef);
 
     // Load the bitmap for the menu item. 
@@ -91,68 +73,13 @@ FileContextMenuExt::~FileContextMenuExt(void)
     InterlockedDecrement(&g_cDllRef);	
 }
 
-bool compareStrings(FileInfo& s1, FileInfo& s2)
-{	
-	const wchar_t *st1=s1.path(), *st2=s2.path();
-	int i=0;
-	size_t n1 = 0, n2 = 0;
-
-	StringCchLengthW(st1, MAX_PATH, &n1);
-	StringCchLengthW(st1, MAX_PATH, &n2);	
-
-	while (i<n1 && i<n2 && std::toupper(st1[i],loc)==std::toupper(st2[i],loc))
-		i++;
-	return (std::toupper(st1[i],loc)<std::toupper(st2[i],loc));
-}
-
-std::wstring ShowCheckSum(int32_t checkSum)
-{
-	std::wstringstream ss;
-	ss << L"0x" << std::uppercase << std::hex << std::setfill(L'0') 
-	   << std::setw(8) << checkSum;	
-	return ss.str();
-}
-
 void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 {		
-	if (!this->m_szSelectedFilesList.empty())
+	if (!m_szSelectedFilesList.empty())
 	{
-		//Detecting folder where the first file is
-		boost::filesystem::path p(this->m_szSelectedFilesList.begin()->path());
-		boost::filesystem::path dir = p.parent_path();		
-
-		// Creating and opening log file
-		std::wofstream logFile;	
-		logFile.open(dir.wstring() + L"\\log.txt", std::ios::out); 
-		
-		// Sort
-		this->m_szSelectedFilesList.sort(compareStrings);
-
-		if (logFile.good())
-			logFile << L"Total " << this->m_szSelectedFilesList.size() << L" file(s)!" <<endl;													
-		
-		CheckSumMultiThread threads(&m_szSelectedFilesList);
-		threads.start();		
-
-		for (auto j = this->m_szSelectedFilesList.begin(); 
-			logFile.good() && j != this->m_szSelectedFilesList.end();
-			j++)
-		{																						
-			boost::unique_lock<boost::mutex> lock(mut);
-			while (!j->ready())
-				j->cond->wait(lock);
-			
-			logFile << j->path()
-					<< L" CheckSum: " << ShowCheckSum(j->checkSum())
-					<< L" Size: " << boost::filesystem::file_size(j->path()) << L" bytes"					
-					<< L" Creation time: " << j->getCreationTime()
-					<< endl;			
-		}				
-
-		logFile.close();
+		FileLogger log(m_szSelectedFilesList);
 	}	
 }
-
 
 #pragma region IUnknown
 
@@ -215,16 +142,16 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(
         // Get an HDROP handle.
         HDROP hDrop = static_cast<HDROP>(GlobalLock(stm.hGlobal));
         if (hDrop != NULL)
-        {           
+        {
 			hr = S_OK;
 			// Get the number of the files
-            nFiles = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);			
+            nFiles = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
             if (nFiles > 0)
-            {				
+            {
+				wchar_t temp[MAX_PATH]; // Current path
                 // Get the path of the files.
 				for (UINT i = 0; i < nFiles; i++)
-				{					
-					wchar_t temp[MAX_PATH];
+				{				
 					if (DragQueryFile(hDrop, i, temp, ARRAYSIZE(temp)) == 0)
 					{						
 						return E_FAIL;
@@ -233,7 +160,7 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(
 					if (PathFileExistsW(temp) && !PathIsDirectoryW(temp))
 					{					
 						FileInfo t(temp);											
-						this->m_szSelectedFilesList.push_back(t);						
+						m_szSelectedFilesList.push_back(t);						
 					}				
 				}							               
             }

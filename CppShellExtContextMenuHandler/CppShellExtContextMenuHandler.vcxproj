@@ -160,6 +160,7 @@
     <ClInclude Include="ClassFactory.h" />
     <ClInclude Include="FileContextMenuExt.h" />
     <ClInclude Include="FileInfo.h" />
+    <ClInclude Include="FileLogger.h" />
     <ClInclude Include="Reg.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
@@ -182,6 +183,7 @@
     </ClCompile>
     <ClCompile Include="FileContextMenuExt.cpp" />
     <ClCompile Include="FileInfo.cpp" />
+    <ClCompile Include="FileLogger.cpp" />
     <ClCompile Include="Reg.cpp" />
   </ItemGroup>
   <ItemGroup>

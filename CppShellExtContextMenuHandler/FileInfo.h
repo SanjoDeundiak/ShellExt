@@ -19,12 +19,14 @@ class FileInfo
 		
 		~FileInfo();
 
+		bool operator<(const FileInfo &other) const;
 		FileInfo &operator=(FileInfo &other);
 
 		const wchar_t *path() const;
 		int32_t checkSum() const;
 		const std::wstring getCreationTime() const;
 		bool ready() const;
+		std::locale loc; // for std::to_upper(char)
 		boost::condition_variable *cond;
 
 	private:		

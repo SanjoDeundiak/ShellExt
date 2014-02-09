@@ -1,10 +1,11 @@
 #include "CheckSumMultiThread.h"
 #define buffSize 1024*4
 
-CheckSumMultiThread::CheckSumMultiThread(std::list<FileInfo> *fileL)
+CheckSumMultiThread::CheckSumMultiThread(std::list<FileInfo> &fileL) :
+	fileList(fileL),
+	currentCheckSum(fileL.begin())
 {
-	pfileList = fileL;
-	currentCheckSum = pfileList->begin();
+	start();
 }
 
 CheckSumMultiThread::~CheckSumMultiThread()
@@ -12,7 +13,7 @@ CheckSumMultiThread::~CheckSumMultiThread()
 	trGroup.join_all();	
 }
 
-int CheckSumMultiThread::start()
+void CheckSumMultiThread::start()
 {	
 	int threadNumber = boost::thread::hardware_concurrency() - 1;
 	if (threadNumber == 0)
@@ -20,8 +21,6 @@ int CheckSumMultiThread::start()
 
 	for (int i = 0; i < threadNumber; i++)		
 		trGroup.add_thread(new boost::thread(&CheckSumMultiThread::threadFunc, this));
-
-	return 0;
 }
 
 int32_t CheckSumMultiThread::findCheckSum(const wchar_t* path)
@@ -65,10 +64,10 @@ void CheckSumMultiThread::threadFunc()
 	while (flag)
 	{
 		this->mtx.lock();
-		if (this->currentCheckSum != this->pfileList->end())						
+		if (this->currentCheckSum != this->fileList.end())						
 			it = (this->currentCheckSum)++;
 		else
-			flag = false;			
+			flag = false;
 		this->mtx.unlock();
 		if (!flag)
 			break;
