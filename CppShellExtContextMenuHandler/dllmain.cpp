@@ -90,7 +90,6 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void **ppv)
         if (pClassFactory)
         {
             hr = pClassFactory->QueryInterface(riid, ppv);
-            pClassFactory->Release();
         }
     }
 

@@ -24,7 +24,7 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 extern long g_cDllRef;
 
 
-ClassFactory::ClassFactory() : m_cRef(1)
+ClassFactory::ClassFactory() : m_cRef(0)
 {
     InterlockedIncrement(&g_cDllRef);
 }
@@ -83,8 +83,7 @@ IFACEMETHODIMP ClassFactory::CreateInstance(IUnknown *pUnkOuter, REFIID riid, vo
         if (pExt)
         {
             // Query the specified interface.
-            hr = pExt->QueryInterface(riid, ppv);
-            pExt->Release();
+            hr = pExt->QueryInterface(riid, ppv);            
         }
     }
 

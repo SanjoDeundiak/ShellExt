@@ -24,7 +24,7 @@ void CheckSumMultiThread::start()
 		trGroup.add_thread(new boost::thread(&CheckSumMultiThread::threadFunc, this));
 }
 
-int32_t CheckSumMultiThread::findCheckSum(std::wstring path)
+int32_t CheckSumMultiThread::findCheckSum(const std::wstring &path)
 {			
 	std::fstream file;
 

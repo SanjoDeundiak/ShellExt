@@ -42,7 +42,7 @@ extern long g_cDllRef;
 
 #define IDM_DISPLAY             0  // The command's identifier offset
 
-FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1), 
+FileContextMenuExt::FileContextMenuExt(void) : m_cRef(0), 
     m_pszMenuText(L"&Load list to log.txt"),
     m_pszVerb("cppdisplay"),
     m_pwszVerb(L"cppdisplay"),

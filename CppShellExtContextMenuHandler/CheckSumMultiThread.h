@@ -16,7 +16,7 @@ class CheckSumMultiThread
 	private:
 		void start();
 		void threadFunc();
-		int32_t findCheckSum(std::wstring path);		
+		int32_t findCheckSum(const std::wstring &path);		
 
 		boost::thread_group trGroup;
 		boost::mutex mtx;
