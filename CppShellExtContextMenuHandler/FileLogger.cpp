@@ -12,8 +12,8 @@ FileLogger::FileLogger(std::list<FileInfo> &filesL) :
 void FileLogger::start()
 {
 	//Detecting folder where the first file is
-	boost::filesystem::path p(filesList.begin()->path());
-	boost::filesystem::path dir = p.parent_path();		
+	boost::filesystem::path dir(filesList.begin()->path());
+	dir = dir.parent_path();		
 
 	// Creating and opening log file
 	std::wofstream logFile;	
@@ -28,13 +28,11 @@ void FileLogger::start()
 		
 	CheckSumMultiThread threads(filesList);	
 
-	boost::unique_lock<boost::mutex> lock(mut);
 	for (auto j = filesList.begin(); 
 		logFile.good() && j != filesList.end();
 		++j)
 	{																								
-		while (!j->ready())
-			j->cond->wait(lock);
+		j->wait();
 		
 		logFile << j->path()
 				<< L" CheckSum: " << ShowCheckSum(j->checkSum())

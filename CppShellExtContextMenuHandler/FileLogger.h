@@ -25,6 +25,6 @@ class FileLogger
 		std::wstring ShowCheckSum(int32_t checkSum);
 		std::list<FileInfo> &filesList;
 		std::locale loc;
-		boost::mutex mut; // For checksum sleep
+		
 		
 };

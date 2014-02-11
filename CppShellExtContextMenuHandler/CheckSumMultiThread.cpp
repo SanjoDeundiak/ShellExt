@@ -1,5 +1,6 @@
 #include "CheckSumMultiThread.h"
-#define buffSize 1024*4
+
+#define buffSize 4096
 
 CheckSumMultiThread::CheckSumMultiThread(std::list<FileInfo> &fileL) :
 	fileList(fileL),
@@ -23,7 +24,7 @@ void CheckSumMultiThread::start()
 		trGroup.add_thread(new boost::thread(&CheckSumMultiThread::threadFunc, this));
 }
 
-int32_t CheckSumMultiThread::findCheckSum(const wchar_t* path)
+int32_t CheckSumMultiThread::findCheckSum(std::wstring path)
 {			
 	std::fstream file;
 
@@ -73,6 +74,6 @@ void CheckSumMultiThread::threadFunc()
 			break;
 		it->m_checkSum = findCheckSum(it->m_path);
 		it->m_ready = true;
-		it->cond->notify_one();
+		it->m_cond.notify_one();
 	}
 }
