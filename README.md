@@ -19,12 +19,19 @@ But there were several minor bugs in this example, that I had fixed.
 1. Build the project. Pay attention to use x64 or x32 settings depending on your system
 2. To use this program you need to run cmd with admin privileges, go to directory with
 your dll file. And type
-#-regsvr32 CppShellExtContextMenuHandler.dll
+    -regsvr32 CppShellExtContextMenuHandler.dll
 3. In order to delete this program first do
-#-regsvr32 /u CppShellExtContextMenuHandler.dll
+    -regsvr32 /u CppShellExtContextMenuHandler.dll
 to clear register.
 
 <h3>Usage</h3>
 
 Just select files that you need, click right button and choose appropriate menu item.
 log.txt will be created in this directory with all information
+
+<h3>Compatibility</h3>
+
+This code was tested on Windows 7/8/8.1 x64. Should also works well on x32 and previous
+versions of Windows.
+Linux is not supported but bussiness logic is separated from platform-dependent code, so
+you can use it and addapt for Linux
